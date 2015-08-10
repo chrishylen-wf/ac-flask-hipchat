@@ -2,8 +2,8 @@ import json
 import logging
 
 from ac_flask.hipchat.events import events
-from ac_flask.hipchat.db import mongo, redis
 from .tenant import Tenant
+from .db import db
 from flask import request
 import requests
 
@@ -21,7 +21,7 @@ def init(addon, allow_global, allow_room, send_events=True, db_name='clients', r
     # noinspection PyUnusedLocal
     @addon.app.route('/addon/installable', methods=['POST'])
     def on_install():
-        clients = mongo[db_name]
+        clients = db.get(db_name, [])
         data = json.loads(request.data)
         if not data.get('roomId', None) and not allow_global:
             return _invalid_install("This add-on can only be installed in individual rooms.  Please visit the " +
@@ -41,7 +41,7 @@ def init(addon, allow_global, allow_room, send_events=True, db_name='clients', r
         client = Tenant(data['oauthId'], data['oauthSecret'], room_id=data.get('roomId', None), capdoc=capdoc)
 
         try:
-            session = client.get_token(redis, token_only=False,
+            session = client.get_token(token_only=False,
                                        scopes=addon.descriptor['capabilities']['hipchatApiConsumer']['scopes'])
         except Exception as e:
             _log.warn("Error validating installation by receiving token: %s" % e)
@@ -74,7 +74,7 @@ def init(addon, allow_global, allow_room, send_events=True, db_name='clients', r
 
 def uninstall_client(oauth_id, db_name='clients', send_events=True):
     client = Tenant.load(oauth_id)
-    clients = mongo[db_name]
+    clients = db.get(db_name, [])
     client_filter = {"id": oauth_id}
     clients.remove(client_filter)
     if send_events:

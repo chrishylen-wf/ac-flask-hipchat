@@ -1,6 +1,6 @@
 from datetime import timedelta
 import time
-from ac_flask.hipchat.db import mongo
+from .db import db
 import jwt
 import logging
 import requests
@@ -44,7 +44,7 @@ class Tenant:
 
     @staticmethod
     def load(client_id):
-        client_data = mongo.clients.find_one(Tenant(client_id).id_query)
+        client_data = db.get(client_id)
         if client_data:
             return Tenant.from_map(client_data)
         else:
@@ -55,7 +55,7 @@ class Tenant:
     def id_query(self):
         return {"id": self.id}
 
-    def get_token(self, cache, token_only=True, scopes=None):
+    def get_token(self, token_only=True, scopes=None):
         if scopes is None:
             scopes = ["send_notification"]
 
@@ -75,11 +75,11 @@ class Tenant:
                 raise Exception("Invalid token: %s" % resp.text)
 
         if token_only:
-            token = cache.get(cache_key)
+            token = db.get(cache_key)
             if not token:
                 data = gen_token()
                 token = data['access_token']
-                cache.setex(cache_key, token, data['expires_in'] - 20)
+                db[cache_key] = token
             return token
         else:
             return gen_token()
