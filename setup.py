@@ -22,8 +22,6 @@ setup(
     platforms='any',
     install_requires=[
         'Flask',
-        'pymongo',
-        'redis',
         'requests',
         'PyJWT'
     ],
